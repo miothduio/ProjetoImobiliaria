@@ -1,0 +1,891 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-10-27T23:45:00.000Z",
+  "__export_source": "insomnia.desktop.app:v9.3.3",
+  "resources": [
+    {
+      "_id": "wrk_imobiliaria_jwt",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "Imobiliária - Testes JWT",
+      "description": "Testes da Atividade 4 (autenticação e autorização com JWT)",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "parentId": "wrk_imobiliaria_jwt",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "token_admin": "COLE_AQUI_O_TOKEN_DO_ADMIN",
+        "token_user": "COLE_AQUI_O_TOKEN_DO_USER",
+        "id_imovel": 1,
+        "id_imovel_apagar": 2,
+        "id_user": 2,
+        "id_user_apagar": 3
+      },
+      "dataPropertyOrder": null,
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "fld_0",
+      "_type": "request_group",
+      "parentId": "wrk_imobiliaria_jwt",
+      "name": "0 - Preparação (pegar os tokens)",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1000
+    },
+    {
+      "_id": "req_0_0",
+      "_type": "request",
+      "parentId": "fld_0",
+      "name": "Registro - exemplo do professor (200)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/public/register",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"teste\",\n  \"email\": \"teste3@teste.com\",\n  \"password\": \"123\",\n  \"role\": \"ADMIN\"\n}"
+      },
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_0_1",
+      "_type": "request",
+      "parentId": "fld_0",
+      "name": "Login ADMIN -> copie o token para token_admin (200)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/public/login",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"admin@admin.com\",\n  \"password\": \"admin123\"\n}"
+      },
+      "metaSortKey": -990,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_0_2",
+      "_type": "request",
+      "parentId": "fld_0",
+      "name": "Cadastrar USER com token ADMIN (201)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/users",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_admin }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Usuario\",\n  \"email\": \"user@teste.com\",\n  \"senha\": \"123\",\n  \"tipo\": \"USER\"\n}"
+      },
+      "metaSortKey": -980,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_0_3",
+      "_type": "request",
+      "parentId": "fld_0",
+      "name": "Login USER -> copie o token para token_user (200)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/public/login",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"user@teste.com\",\n  \"password\": \"123\"\n}"
+      },
+      "metaSortKey": -970,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "fld_1",
+      "_type": "request_group",
+      "parentId": "wrk_imobiliaria_jwt",
+      "name": "1 - Login (todos, sem token)",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -990
+    },
+    {
+      "_id": "req_1_0",
+      "_type": "request",
+      "parentId": "fld_1",
+      "name": "Login correto (200)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/public/login",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"admin@admin.com\",\n  \"password\": \"admin123\"\n}"
+      },
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_1_1",
+      "_type": "request",
+      "parentId": "fld_1",
+      "name": "Login senha errada (401)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/public/login",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"admin@admin.com\",\n  \"password\": \"errada\"\n}"
+      },
+      "metaSortKey": -990,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "fld_2",
+      "_type": "request_group",
+      "parentId": "wrk_imobiliaria_jwt",
+      "name": "2 - Listar imóveis (todos, sem token)",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -980
+    },
+    {
+      "_id": "req_2_0",
+      "_type": "request",
+      "parentId": "fld_2",
+      "name": "Listar imóveis sem token (200)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/imoveis",
+      "description": "",
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "body": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_2_1",
+      "_type": "request",
+      "parentId": "fld_2",
+      "name": "Um imóvel sem token (200)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/imoveis/{{ _.id_imovel }}",
+      "description": "",
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "body": {},
+      "metaSortKey": -990,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "fld_3",
+      "_type": "request_group",
+      "parentId": "wrk_imobiliaria_jwt",
+      "name": "3 - Cadastrar, alterar e remover imóveis (ADMIN)",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -970
+    },
+    {
+      "_id": "req_3_0",
+      "_type": "request",
+      "parentId": "fld_3",
+      "name": "Cadastrar sem token (401)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/imoveis",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"titulo\": \"Casa teste\",\n  \"finalidade\": \"VENDA\",\n  \"status\": \"DISPONIVEL\",\n  \"precoVenda\": 350000,\n  \"dormitorios\": 3\n}"
+      },
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_3_1",
+      "_type": "request",
+      "parentId": "fld_3",
+      "name": "Cadastrar com token inválido (401)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/imoveis",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "token.invalido.123",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"titulo\": \"Casa teste\",\n  \"finalidade\": \"VENDA\",\n  \"status\": \"DISPONIVEL\",\n  \"precoVenda\": 350000,\n  \"dormitorios\": 3\n}"
+      },
+      "metaSortKey": -990,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_3_2",
+      "_type": "request",
+      "parentId": "fld_3",
+      "name": "Cadastrar com token USER (403)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/imoveis",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_user }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"titulo\": \"Casa teste\",\n  \"finalidade\": \"VENDA\",\n  \"status\": \"DISPONIVEL\",\n  \"precoVenda\": 350000,\n  \"dormitorios\": 3\n}"
+      },
+      "metaSortKey": -980,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_3_3",
+      "_type": "request",
+      "parentId": "fld_3",
+      "name": "Cadastrar com token ADMIN (201)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/imoveis",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_admin }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"titulo\": \"Casa teste\",\n  \"finalidade\": \"VENDA\",\n  \"status\": \"DISPONIVEL\",\n  \"precoVenda\": 350000,\n  \"dormitorios\": 3\n}"
+      },
+      "metaSortKey": -970,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_3_4",
+      "_type": "request",
+      "parentId": "fld_3",
+      "name": "Alterar com token USER (403)",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/imoveis/{{ _.id_imovel }}",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_user }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"titulo\": \"Casa teste (alterada)\",\n  \"finalidade\": \"VENDA\",\n  \"status\": \"DISPONIVEL\",\n  \"precoVenda\": 380000,\n  \"dormitorios\": 3\n}"
+      },
+      "metaSortKey": -960,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_3_5",
+      "_type": "request",
+      "parentId": "fld_3",
+      "name": "Alterar com token ADMIN (204)",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/imoveis/{{ _.id_imovel }}",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_admin }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"titulo\": \"Casa teste (alterada)\",\n  \"finalidade\": \"VENDA\",\n  \"status\": \"DISPONIVEL\",\n  \"precoVenda\": 380000,\n  \"dormitorios\": 3\n}"
+      },
+      "metaSortKey": -950,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_3_6",
+      "_type": "request",
+      "parentId": "fld_3",
+      "name": "Remover com token USER (403)",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/imoveis/{{ _.id_imovel_apagar }}",
+      "description": "",
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_user }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {},
+      "metaSortKey": -940,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_3_7",
+      "_type": "request",
+      "parentId": "fld_3",
+      "name": "Remover com token ADMIN (204)",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/imoveis/{{ _.id_imovel_apagar }}",
+      "description": "",
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_admin }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {},
+      "metaSortKey": -930,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "fld_4",
+      "_type": "request_group",
+      "parentId": "wrk_imobiliaria_jwt",
+      "name": "4 - Cadastrar e gerenciar usuários (ADMIN)",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -960
+    },
+    {
+      "_id": "req_4_0",
+      "_type": "request",
+      "parentId": "fld_4",
+      "name": "Listar usuários sem token (401)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/users",
+      "description": "",
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "body": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_4_1",
+      "_type": "request",
+      "parentId": "fld_4",
+      "name": "Listar usuários com token USER (403)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/users",
+      "description": "",
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_user }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {},
+      "metaSortKey": -990,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_4_2",
+      "_type": "request",
+      "parentId": "fld_4",
+      "name": "Listar usuários com token ADMIN (200)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/users",
+      "description": "",
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_admin }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {},
+      "metaSortKey": -980,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_4_3",
+      "_type": "request",
+      "parentId": "fld_4",
+      "name": "Cadastrar usuário com token USER (403)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/users",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_user }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Apagar\",\n  \"email\": \"apagar@teste.com\",\n  \"senha\": \"123\",\n  \"tipo\": \"USER\"\n}"
+      },
+      "metaSortKey": -970,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_4_4",
+      "_type": "request",
+      "parentId": "fld_4",
+      "name": "Cadastrar usuário com token ADMIN (201)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/users",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_admin }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Apagar\",\n  \"email\": \"apagar@teste.com\",\n  \"senha\": \"123\",\n  \"tipo\": \"USER\"\n}"
+      },
+      "metaSortKey": -960,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_4_5",
+      "_type": "request",
+      "parentId": "fld_4",
+      "name": "Alterar usuário com token ADMIN (204)",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/users/{{ _.id_user }}",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_admin }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Usuario Alterado\",\n  \"email\": \"user@teste.com\",\n  \"tipo\": \"USER\"\n}"
+      },
+      "metaSortKey": -950,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_4_6",
+      "_type": "request",
+      "parentId": "fld_4",
+      "name": "Remover usuário com token USER (403)",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/users/{{ _.id_user_apagar }}",
+      "description": "",
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_user }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {},
+      "metaSortKey": -940,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_4_7",
+      "_type": "request",
+      "parentId": "fld_4",
+      "name": "Remover usuário com token ADMIN (204)",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/users/{{ _.id_user_apagar }}",
+      "description": "",
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_admin }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {},
+      "metaSortKey": -930,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "fld_5",
+      "_type": "request_group",
+      "parentId": "wrk_imobiliaria_jwt",
+      "name": "5 - Alterar status (qualquer autenticado)",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -950
+    },
+    {
+      "_id": "req_5_0",
+      "_type": "request",
+      "parentId": "fld_5",
+      "name": "Alterar status sem token (401)",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/imoveis/{{ _.id_imovel }}/status",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"VENDIDO\"\n}"
+      },
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_5_1",
+      "_type": "request",
+      "parentId": "fld_5",
+      "name": "Alterar status com token USER (200)",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/imoveis/{{ _.id_imovel }}/status",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_user }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"VENDIDO\"\n}"
+      },
+      "metaSortKey": -990,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_5_2",
+      "_type": "request",
+      "parentId": "fld_5",
+      "name": "Alterar status com token ADMIN (200)",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/imoveis/{{ _.id_imovel }}/status",
+      "description": "",
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token_admin }}",
+        "prefix": "",
+        "disabled": false
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"DISPONIVEL\"\n}"
+      },
+      "metaSortKey": -980,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    }
+  ]
+}

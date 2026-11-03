@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Informações do imóvel</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f2f4f7; font-family:Arial, Helvetica, sans-serif; color:#333333;">
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f4f7; padding:24px 12px;">
+  <tr>
+    <td align="center">
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+             style="max-width:600px; background-color:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+
+        <!-- Cabeçalho -->
+        <tr>
+          <td style="background-color:#1f3a5f; padding:24px 32px;">
+            <p style="margin:0; color:#ffffff; font-size:20px; font-weight:bold;">Imobiliária</p>
+            <p style="margin:4px 0 0; color:#c9d6e8; font-size:13px;">Recebemos o seu contato</p>
+          </td>
+        </tr>
+
+        <!-- Saudação -->
+        <tr>
+          <td style="padding:28px 32px 8px;">
+            <h2 style="margin:0 0 12px; font-size:22px; color:#1f3a5f;">
+              Olá, <span th:text="${nomeCliente}">Cliente</span>!
+            </h2>
+            <p style="margin:0; font-size:15px; line-height:1.6;" th:text="${mensagemImobiliaria}">
+              Mensagem da imobiliária
+            </p>
+          </td>
+        </tr>
+
+        <!-- Card do imóvel -->
+        <tr>
+          <td style="padding:20px 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                   style="border:1px solid #e3e7ed; border-radius:8px;">
+              <tr>
+                <td style="padding:20px;">
+
+                  <!-- Etiquetas -->
+                  <p style="margin:0 0 10px;">
+                    <span th:if="${tipo != null}" th:text="${tipo}"
+                          style="display:inline-block; background-color:#e8eef6; color:#1f3a5f; font-size:12px; font-weight:bold; padding:4px 10px; border-radius:12px; margin-right:6px;">Tipo</span>
+                    <span th:if="${finalidade != null}" th:text="${finalidade}"
+                          style="display:inline-block; background-color:#e6f4ea; color:#1e7b3c; font-size:12px; font-weight:bold; padding:4px 10px; border-radius:12px;">Finalidade</span>
+                  </p>
+
+                  <h3 style="margin:0 0 6px; font-size:19px; color:#222222;" th:text="${titulo}">Título do imóvel</h3>
+
+                  <p style="margin:0 0 16px; font-size:13px; color:#777777;">
+                    <span th:text="${endereco}">Endereço</span><span th:if="${bairro != null}" th:text="' · ' + ${bairro}"></span>
+                  </p>
+
+                  <!-- Preços -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+                    <tr>
+                      <td th:if="${precoVenda != null}" style="padding-right:24px;">
+                        <p style="margin:0; font-size:12px; color:#777777; text-transform:uppercase;">Venda</p>
+                        <p style="margin:2px 0 0; font-size:20px; font-weight:bold; color:#1e7b3c;"
+                           th:text="'R$ ' + ${#numbers.formatDecimal(precoVenda, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</p>
+                      </td>
+                      <td th:if="${precoAluguel != null}">
+                        <p style="margin:0; font-size:12px; color:#777777; text-transform:uppercase;">Aluguel</p>
+                        <p style="margin:2px 0 0; font-size:20px; font-weight:bold; color:#1e7b3c;"
+                           th:text="'R$ ' + ${#numbers.formatDecimal(precoAluguel, 1, 'POINT', 2, 'COMMA')} + '/mês'">R$ 0,00</p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Números do imóvel -->
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                         style="background-color:#f7f9fb; border-radius:6px; margin-bottom:16px;">
+                    <tr>
+                      <td th:if="${dormitorios != null}" align="center" style="padding:12px 4px;">
+                        <p style="margin:0; font-size:18px;">🛏️</p>
+                        <p style="margin:2px 0 0; font-size:13px;"><strong th:text="${dormitorios}">0</strong> dorm.</p>
+                      </td>
+                      <td th:if="${banheiros != null}" align="center" style="padding:12px 4px;">
+                        <p style="margin:0; font-size:18px;">🛁</p>
+                        <p style="margin:2px 0 0; font-size:13px;"><strong th:text="${banheiros}">0</strong> banh.</p>
+                      </td>
+                      <td th:if="${garagem != null}" align="center" style="padding:12px 4px;">
+                        <p style="margin:0; font-size:18px;">🚗</p>
+                        <p style="margin:2px 0 0; font-size:13px;"><strong th:text="${garagem}">0</strong> vaga(s)</p>
+                      </td>
+                      <td th:if="${areaTotal != null}" align="center" style="padding:12px 4px;">
+                        <p style="margin:0; font-size:18px;">📐</p>
+                        <p style="margin:2px 0 0; font-size:13px;"><strong th:text="${areaTotal}">0</strong> m²</p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Descrição -->
+                  <p th:if="${descricao != null}" th:text="${descricao}"
+                     style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#444444;">Descrição</p>
+
+                  <!-- Detalhes -->
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
+                    <tr th:if="${areaTotal != null}">
+                      <td style="padding:8px 0; border-top:1px solid #eeeeee; color:#777777;">Área total</td>
+                      <td align="right" style="padding:8px 0; border-top:1px solid #eeeeee;" th:text="${areaTotal} + ' m²'"></td>
+                    </tr>
+                    <tr th:if="${areaConstruida != null}">
+                      <td style="padding:8px 0; border-top:1px solid #eeeeee; color:#777777;">Área construída</td>
+                      <td align="right" style="padding:8px 0; border-top:1px solid #eeeeee;" th:text="${areaConstruida} + ' m²'"></td>
+                    </tr>
+                    <tr th:if="${bairro != null}">
+                      <td style="padding:8px 0; border-top:1px solid #eeeeee; color:#777777;">Bairro</td>
+                      <td align="right" style="padding:8px 0; border-top:1px solid #eeeeee;" th:text="${bairro}"></td>
+                    </tr>
+                  </table>
+
+                  <!-- Características -->
+                  <div th:if="${caracteristicas != null}" style="margin-top:16px;">
+                    <p style="margin:0 0 6px; font-size:13px; font-weight:bold; color:#1f3a5f;">Características</p>
+                    <p style="margin:0; font-size:14px; line-height:1.6; color:#444444;" th:text="${caracteristicas}"></p>
+                  </div>
+
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Mensagem do cliente -->
+        <tr th:if="${mensagemCliente != null}">
+          <td style="padding:4px 32px 20px;">
+            <p style="margin:0 0 6px; font-size:13px; color:#777777;">Sua mensagem:</p>
+            <p style="margin:0; padding:12px 16px; background-color:#f7f9fb; border-left:4px solid #1f3a5f; font-size:14px; font-style:italic; line-height:1.6;"
+               th:text="${mensagemCliente}">Mensagem do cliente</p>
+          </td>
+        </tr>
+
+        <!-- Assinatura -->
+        <tr>
+          <td style="padding:0 32px 28px; font-size:14px; line-height:1.6;">
+            Atenciosamente,<br>
+            <strong>Equipe da Imobiliária</strong>
+          </td>
+        </tr>
+
+        <!-- Rodapé -->
+        <tr>
+          <td style="background-color:#f7f9fb; padding:16px 32px; border-top:1px solid #e3e7ed; font-size:12px; color:#999999;">
+            <span th:if="${dataContato != null}">
+              Contato registrado em <span th:text="${#temporals.format(dataContato, 'dd/MM/yyyy HH:mm')}"></span>.<br>
+            </span>
+            Este é um e-mail automático, não é preciso respondê-lo.
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

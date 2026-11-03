@@ -1,0 +1,9 @@
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.idea/
+*.log
+
+# Segredos
+.env
+.env.local
