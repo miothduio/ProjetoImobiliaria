@@ -1,5 +1,6 @@
 package com.example.demo.controllers;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
@@ -16,9 +17,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.example.demo.dtos.PaginaDTO;
 import com.example.demo.dtos.SaberMaisDTO;
 import com.example.demo.dtos.StatusDTO;
 import com.example.demo.models.ImovelModel;
@@ -41,6 +44,33 @@ public class ImovelController {
     public ResponseEntity<List<ImovelModel>> getAll() {
         List<ImovelModel> list = service.getAll();
         return ResponseEntity.status(HttpStatus.OK).body(list);
+    }
+
+    /**
+     * GET /imoveis/busca  (público, usado pela vitrine)
+     * Parâmetros opcionais: bairroId, finalidade (VENDA|ALUGUEL), precoMin, precoMax,
+     * ordem (recentes|preco_asc|preco_desc), apenasDisponiveis (padrão true),
+     * pagina (começa em 0), tamanho (padrão 9, máximo 50).
+     * Resposta: { conteudo, pagina, tamanho, totalElementos, totalPaginas }; cada imóvel traz "capaUrl".
+     * Filtro inválido -> 400 { "mensagem": "..." }
+     */
+    @GetMapping("/busca")
+    public ResponseEntity<?> buscar(
+            @RequestParam(required = false) Integer bairroId,
+            @RequestParam(required = false) String finalidade,
+            @RequestParam(required = false) BigDecimal precoMin,
+            @RequestParam(required = false) BigDecimal precoMax,
+            @RequestParam(defaultValue = "recentes") String ordem,
+            @RequestParam(defaultValue = "true") boolean apenasDisponiveis,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "9") int tamanho) {
+        try {
+            PaginaDTO<ImovelModel> resultado = service.buscar(bairroId, finalidade, precoMin, precoMax,
+                    ordem, apenasDisponiveis, pagina, tamanho);
+            return ResponseEntity.ok(resultado);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("mensagem", e.getMessage()));
+        }
     }
 
     @GetMapping(value = "/{id}")

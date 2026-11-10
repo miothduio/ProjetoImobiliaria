@@ -11,6 +11,8 @@
  * O script cria seus próprios dados de teste (usuários e um imóvel) e apaga tudo no final.
  */
 
+import { createHmac } from 'node:crypto'
+
 const API_URL = (process.argv[2] || process.env.API_URL || 'http://localhost:8080').replace(/\/$/, '')
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@admin.com'
 const ADMIN_SENHA = process.env.ADMIN_SENHA || 'admin123'
@@ -41,6 +43,28 @@ async function chamar(metodo, caminho, { token, body, headers = {} } = {}) {
     /* corpo não é JSON */
   }
   return { status: resposta.status, dados, headers: resposta.headers }
+}
+
+function lerPayload(token) {
+  if (!token) return null
+  try {
+    return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Token já vencido, assinado com a mesma chave do backend (padrão do application.properties).
+ * Se você definiu JWT_SECRET no backend, rode com a mesma variável.
+ */
+function gerarTokenVencido(email, tipo) {
+  const segredo = process.env.JWT_SECRET || 'imobiliaria-chave-secreta-trocar-em-producao-2026'
+  const b64 = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url')
+  const agora = Math.floor(Date.now() / 1000)
+  const corpo = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ iss: 'imobiliaria-api', sub: email, tipo, iat: agora - 7200, exp: agora - 60 })}`
+  const assinatura = createHmac('sha256', segredo).update(corpo).digest('base64url')
+  return `${corpo}.${assinatura}`
 }
 
 function idDoLocation(resposta) {
@@ -246,6 +270,94 @@ async function main() {
   await caso(S4, 'DELETE /users/{id} USER', 403, () => chamar('DELETE', `/users/${idApagar}`, { token: tokenUser }))
   await caso(S4, 'DELETE /users/{id} ADMIN', 204, () =>
     chamar('DELETE', `/users/${idApagar}`, { token: tokenAdmin }),
+  )
+
+  // ---------------- 7. Comportamentos que o front trata (Aula 2) ----------------
+  const S7 = '7. Comportamentos que o front trata (Aula 2)'
+  await caso(S7, 'POST /public/login campos vazios', 400, () =>
+    chamar('POST', '/public/login', { body: { email: '', password: '' } }),
+  )
+  await caso(
+    S7,
+    'POST /public/login e-mail inexistente',
+    401,
+    () => chamar('POST', '/public/login', { body: { email: `ninguem.${sufixo}@teste.com`, password: '123' } }),
+    (r) => (r.dados?.mensagem === 'E-mail ou senha inválidos' ? null : 'mensagem diferente do login com senha errada'),
+  )
+  await caso(
+    S7,
+    'payload do token (sub, tipo, exp de 2 h)',
+    200,
+    async () => ({ status: 200, dados: lerPayload(tokenUser) }),
+    ({ dados: payload }) => {
+      if (!payload) return 'token ilegível (o login do USER falhou?)'
+      if (payload.sub !== emailUser) return `sub = ${payload.sub}`
+      if (String(payload.tipo).toUpperCase() !== 'USER') return `tipo = ${payload.tipo}`
+      const horas = (payload.exp - payload.iat) / 3600
+      return Math.round(horas) === 2 ? null : `validade de ${horas.toFixed(1)} h`
+    },
+  )
+
+  const tokenVencido = gerarTokenVencido(emailUser, 'USER')
+  await caso(
+    S7,
+    'GET /users token expirado',
+    401,
+    () => chamar('GET', '/users', { token: tokenVencido }),
+    (r) => (r.dados?.mensagem === 'Token expirado' ? null : `mensagem "${r.dados?.mensagem}" (JWT_SECRET diferente?)`),
+  )
+  await caso(S7, 'GET /imoveis token expirado (público ignora)', 200, () =>
+    chamar('GET', '/imoveis', { token: tokenVencido }),
+  )
+
+  await caso(S7, 'GET /me sem token', 401, () => chamar('GET', '/me'), temMensagem)
+  await caso(
+    S7,
+    'GET /me USER',
+    200,
+    () => chamar('GET', '/me', { token: tokenUser }),
+    (r) => (r.dados?.email === emailUser && !('senha' in r.dados) ? null : 'dados do usuário errados ou com senha'),
+  )
+
+  await caso(
+    S7,
+    'GET /imoveis/busca?tamanho=2',
+    200,
+    () => chamar('GET', '/imoveis/busca?tamanho=2&ordem=preco_asc'),
+    (r) => {
+      const d = r.dados
+      if (!d || !Array.isArray(d.conteudo)) return 'resposta sem "conteudo"'
+      if (d.conteudo.length > 2) return `veio ${d.conteudo.length} itens com tamanho=2`
+      if (typeof d.totalPaginas !== 'number' || typeof d.totalElementos !== 'number') return 'sem totais'
+      return d.conteudo.every((i) => 'capaUrl' in i) ? null : 'imóvel sem "capaUrl"'
+    },
+  )
+  await caso(
+    S7,
+    'GET /imoveis/busca precoMin > precoMax',
+    400,
+    () => chamar('GET', '/imoveis/busca?precoMin=500&precoMax=100'),
+    temMensagem,
+  )
+  await caso(S7, 'GET /imoveis/busca finalidade inválida', 400, () => chamar('GET', '/imoveis/busca?finalidade=XYZ'), temMensagem)
+  await caso(S7, 'GET /imoveis/abc (id não numérico)', 400, () => chamar('GET', '/imoveis/abc'))
+  // não envia e-mail de verdade: a validação recusa antes
+  await caso(
+    S7,
+    'POST /imoveis/{id}/contato sem nome (sem token)',
+    400,
+    () =>
+      chamar('POST', `/imoveis/${primeiroId}/contato`, {
+        body: { nome: '', email: 'cliente@teste.com', assunto: 'Teste', mensagem: 'Teste' },
+      }),
+    temMensagem,
+  )
+  await caso(
+    S7,
+    'POST /contato e-mail inválido',
+    400,
+    () => chamar('POST', '/contato', { body: { nome: 'Teste', email: 'invalido', assunto: 'Teste', mensagem: 'Teste' } }),
+    temMensagem,
   )
 
   // ---------------- 6. CORS ----------------

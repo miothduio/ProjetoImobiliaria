@@ -1,9 +1,10 @@
 import axios from 'axios'
+import { avisarSessaoExpirada, tokenExpirado } from '../auth/sessao.js'
 
 /** Endereço do backend. Configure em .env.local (VITE_API_URL). */
 export const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8080').replace(/\/$/, '')
 
-const TOKEN_KEY = 'imobiliaria.token'
+export const TOKEN_KEY = 'imobiliaria.token'
 
 /** Guarda o JWT no navegador. try/catch: o localStorage pode estar bloqueado. */
 export const tokenStorage = {
@@ -36,23 +37,33 @@ const api = axios.create({
   timeout: 15000,
 })
 
-// Toda requisição sai com "Authorization: Bearer <token>" quando há usuário logado
+// Toda requisição sai com "Authorization: Bearer <token>" quando há usuário logado.
+// Token já vencido não é enviado: é apagado aqui e a aplicação é avisada para deslogar.
+// (Detalhe do backend: nas rotas PÚBLICAS um token vencido é simplesmente ignorado e a
+// resposta é 200, então o front não pode depender só do 401 para perceber a expiração.)
 api.interceptors.request.use((config) => {
   const token = tokenStorage.get()
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    if (tokenExpirado(token)) {
+      tokenStorage.clear()
+      avisarSessaoExpirada()
+    } else {
+      config.headers.Authorization = `Bearer ${token}`
+    }
   }
   return config
 })
 
-// 401 com token salvo = sessão expirada/inválida: apaga o token e avisa a aplicação
-// (o redirecionamento para o login entra junto com a tela de login).
+// 401 numa rota protegida = sem token, token inválido/expirado ou usuário apagado:
+// apaga o token e avisa a aplicação (o AuthProvider desloga e as rotas protegidas mandam para o login).
+// As rotas /public/* ficam de fora: no login, 401 significa "e-mail ou senha inválidos".
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && tokenStorage.get()) {
+    const rotaPublica = (error.config?.url || '').startsWith('/public/')
+    if (error.response?.status === 401 && !rotaPublica) {
       tokenStorage.clear()
-      window.dispatchEvent(new CustomEvent('sessao-expirada'))
+      avisarSessaoExpirada()
     }
     return Promise.reject(error)
   },
@@ -64,7 +75,13 @@ api.interceptors.response.use(
  */
 export function mensagemDeErro(error, padrao = 'Algo deu errado. Tente novamente.') {
   if (!error?.response) {
-    return 'Não foi possível conectar ao servidor. Verifique se o backend está rodando.'
+    if (error?.code === 'ECONNABORTED') {
+      return 'O servidor demorou demais para responder. Tente novamente.'
+    }
+    if (error?.request) {
+      return 'Não foi possível conectar ao servidor. Verifique sua conexão ou se o backend está rodando.'
+    }
+    return error?.message || padrao
   }
 
   const { status, data } = error.response
@@ -81,9 +98,17 @@ export function mensagemDeErro(error, padrao = 'Algo deu errado. Tente novamente
       return mensagemBackend || 'Item não encontrado.'
     case 409:
       return mensagemBackend || 'A operação conflita com uma regra do sistema.'
+    case 502:
+    case 503:
+      return mensagemBackend || 'Serviço temporariamente indisponível. Tente novamente em instantes.'
     default:
       return status >= 500 ? 'O servidor encontrou um problema. Tente novamente em instantes.' : padrao
   }
+}
+
+/** true quando a requisição foi cancelada de propósito (ex.: o usuário trocou de página). */
+export function foiCancelada(error) {
+  return axios.isCancel(error)
 }
 
 /** Monta a URL completa de um arquivo servido pelo backend (ex.: "/uploads/3/foto.png"). */

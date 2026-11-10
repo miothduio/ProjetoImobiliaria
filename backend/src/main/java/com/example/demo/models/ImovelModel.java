@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -17,6 +18,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -91,5 +93,14 @@ public class ImovelModel implements Serializable {
     @UpdateTimestamp
     @Column (name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /**
+     * URL da foto de capa (ex.: "/uploads/3/abc_foto.jpg"). Não é coluna do banco:
+     * é preenchida só pela busca da vitrine (GET /imoveis/busca), para o front
+     * não precisar fazer uma chamada /fotos/imovel/{id} por card.
+     */
+    @Transient
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String capaUrl;
 
 }

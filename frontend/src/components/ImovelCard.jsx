@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { listarFotosDoImovel } from '../services/imoveisService.js'
 import { urlDoBackend } from '../services/api.js'
 import { localizacao, rotuloFinalidade, valorPrincipal } from '../utils/imovel.js'
 
-function useCapa(imovelId) {
+/**
+ * Capa do card. A busca da vitrine já traz "capaUrl"; só quando o imóvel veio de outro
+ * endpoint (sem esse campo) o card busca as fotos dele.
+ */
+function useCapa(imovel) {
+  const jaVeio = Object.hasOwn(imovel, 'capaUrl')
+  const imovelId = imovel.id
   const [capa, setCapa] = useState(null)
 
   useEffect(() => {
+    if (jaVeio) return undefined
     let ativo = true
     listarFotosDoImovel(imovelId)
       .then((fotos) => {
@@ -19,9 +27,9 @@ function useCapa(imovelId) {
     return () => {
       ativo = false
     }
-  }, [imovelId])
+  }, [imovelId, jaVeio])
 
-  return capa
+  return jaVeio ? urlDoBackend(imovel.capaUrl) : capa
 }
 
 function Detalhe({ valor, rotulo }) {
@@ -33,10 +41,11 @@ function Detalhe({ valor, rotulo }) {
   )
 }
 
-export default function ImovelCard({ imovel }) {
-  const capa = useCapa(imovel.id)
+export default function ImovelCard({ imovel, finalidadeFiltro }) {
+  const location = useLocation()
+  const capa = useCapa(imovel)
   const [fotoFalhou, setFotoFalhou] = useState(false)
-  const { valor, sufixo } = valorPrincipal(imovel)
+  const { valor, sufixo } = valorPrincipal(imovel, finalidadeFiltro)
   const finalidade = rotuloFinalidade(imovel.finalidade)
   const tipo = imovel.tipoImovel?.nome
   const local = localizacao(imovel)
@@ -62,7 +71,12 @@ export default function ImovelCard({ imovel }) {
           {tipo && <span className="etiqueta">{tipo}</span>}
           <span className="card__codigo">Cód. {imovel.id}</span>
         </p>
-        <h2 className="card__titulo">{imovel.titulo || 'Imóvel sem título'}</h2>
+        <h2 className="card__titulo">
+          {/* o link cobre o card inteiro (ver .card__link no CSS); "voltar" guarda os filtros da vitrine */}
+          <Link to={`/imoveis/${imovel.id}`} state={{ voltar: location.search }} className="card__link">
+            {imovel.titulo || 'Imóvel sem título'}
+          </Link>
+        </h2>
         {local && <p className="card__local">{local}</p>}
 
         <ul className="card__detalhes">

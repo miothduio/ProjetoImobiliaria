@@ -75,6 +75,9 @@ public class SecurityConfig {
                 // Formulário "saber mais" do site -> visitante, sem token
                 .requestMatchers(HttpMethod.POST, "/imoveis/sabermais/*").permitAll()
 
+                // "Entrar em contato" do site -> visitante, sem token (envia para a imobiliária)
+                .requestMatchers(HttpMethod.POST, "/imoveis/*/contato", "/contato").permitAll()
+
                 // Alterar status de imóvel -> qualquer usuário autenticado
                 // (precisa vir ANTES da regra de ADMIN de /imoveis/**)
                 .requestMatchers(HttpMethod.PATCH, "/imoveis/*/status").authenticated()
