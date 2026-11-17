@@ -49,7 +49,8 @@ public class ImovelController {
     /**
      * GET /imoveis/busca  (público, usado pela vitrine)
      * Parâmetros opcionais: bairroId, finalidade (VENDA|ALUGUEL), precoMin, precoMax,
-     * ordem (recentes|preco_asc|preco_desc), apenasDisponiveis (padrão true),
+     * ordem (recentes|preco_asc|preco_desc), apenasDisponiveis (padrão true; com false os
+     * indisponíveis também vêm, depois dos disponíveis),
      * pagina (começa em 0), tamanho (padrão 9, máximo 50).
      * Resposta: { conteudo, pagina, tamanho, totalElementos, totalPaginas }; cada imóvel traz "capaUrl".
      * Filtro inválido -> 400 { "mensagem": "..." }

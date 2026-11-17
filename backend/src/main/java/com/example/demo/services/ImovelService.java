@@ -22,10 +22,12 @@ import com.example.demo.repositories.ImovelRepository;
 public class ImovelService {
     private final ImovelRepository repository;
     private final FotoImovelRepository fotoRepository;
+    private final RemocaoService remocao;
 
-    public ImovelService(ImovelRepository repository, FotoImovelRepository fotoRepository) {
+    public ImovelService(ImovelRepository repository, FotoImovelRepository fotoRepository, RemocaoService remocao) {
         this.repository = repository;
         this.fotoRepository = fotoRepository;
+        this.remocao = remocao;
     }
 
     public List<ImovelModel> getAll() {
@@ -54,12 +56,13 @@ public class ImovelService {
     }
 
     /**
-     * Remove o imóvel. Antes apaga as fotos dele (registros e arquivos),
-     * senão o banco bloqueia a exclusão por causa da chave estrangeira
-     * fotos_imoveis.imovel_id.
+     * Remove o imóvel. Antes apaga o que depende dele (favoritos, ofertas, contratos
+     * e fotos, registros e arquivos), senão o banco bloqueia a exclusão por causa
+     * das chaves estrangeiras.
      */
     @Transactional
     public void delete(Integer id) {
+        remocao.dependenciasDoImovel(id);
         List<FotoImovelModel> fotos = fotoRepository.findByImovelIdOrderByOrdemAscIdAsc(id);
         for (FotoImovelModel foto : fotos) {
             try {
@@ -103,7 +106,7 @@ public class ImovelService {
      * @param precoMin          valor mínimo (inclusive)
      * @param precoMax          valor máximo (inclusive)
      * @param ordem             preco_asc, preco_desc ou recentes (padrão)
-     * @param apenasDisponiveis true = só status DISPONIVEL
+     * @param apenasDisponiveis true = só status DISPONIVEL; false = todos, com os disponíveis primeiro
      * @param pagina            começa em 0
      * @param tamanho           itens por página (1 a 50)
      */
@@ -138,7 +141,10 @@ public class ImovelService {
                     if (precoMin != null && valor.compareTo(precoMin) < 0) return false;
                     return precoMax == null || valor.compareTo(precoMax) <= 0;
                 })
-                .sorted(comparador(ordem, fin))
+                .sorted(apenasDisponiveis
+                        ? comparador(ordem, fin)
+                        // mostrando todos: os disponíveis primeiro, depois os indisponíveis, cada grupo na ordem pedida
+                        : Comparator.comparing((ImovelModel i) -> !estaDisponivel(i)).thenComparing(comparador(ordem, fin)))
                 .toList();
 
         long total = filtrados.size();
@@ -154,20 +160,37 @@ public class ImovelService {
 
     /** Coloca em capaUrl a foto marcada como capa (ou a primeira da ordem). */
     private void preencherCapa(ImovelModel imovel) {
-        List<FotoImovelModel> fotos = fotoRepository.findByImovelIdOrderByOrdemAscIdAsc(imovel.getId());
-        fotos.stream()
+        imovel.setCapaUrl(urlDaCapa(imovel.getId()));
+    }
+
+    /** URL da foto de capa (ou da primeira da ordem); null se o imóvel não tem fotos. */
+    public String urlDaCapa(Integer imovelId) {
+        List<FotoImovelModel> fotos = fotoRepository.findByImovelIdOrderByOrdemAscIdAsc(imovelId);
+        return fotos.stream()
                 .filter(f -> Boolean.TRUE.equals(f.getCapa()))
                 .findFirst()
                 .or(() -> fotos.stream().findFirst())
-                .ifPresent(f -> imovel.setCapaUrl(f.getUrl()));
+                .map(FotoImovelModel::getUrl)
+                .orElse(null);
     }
+
+    /** O imóvel pode receber ofertas? (o banco tem "Disponível" e "DISPONIVEL") */
+    public static boolean estaDisponivel(ImovelModel imovel) {
+        return imovel != null && STATUS_DISPONIVEL.equals(normalizar(imovel.getStatus()));
+    }
+
+    // Situações do imóvel gravadas pelo fluxo de ofertas e contratos
+    public static final String STATUS_DISPONIVEL = "DISPONIVEL";
+    public static final String STATUS_RESERVADO = "RESERVADO";
+    public static final String STATUS_ALUGADO = "ALUGADO";
+    public static final String STATUS_VENDIDO = "VENDIDO";
 
     /**
      * O imóvel serve para essa finalidade?
      * VENDA/ALUGUEL explícitos valem como estão; outros valores (ex.: "Residencial")
      * contam para a finalidade cujo preço estiver preenchido.
      */
-    private static boolean oferecePara(ImovelModel i, String finalidade) {
+    static boolean oferecePara(ImovelModel i, String finalidade) {
         String propria = normalizar(i.getFinalidade());
         if (propria.equals("VENDA") || propria.equals("ALUGUEL")) {
             return propria.equals(finalidade);
@@ -207,7 +230,7 @@ public class ImovelService {
     }
 
     /** "Disponível " -> "DISPONIVEL"; null -> "". */
-    private static String normalizar(String texto) {
+    static String normalizar(String texto) {
         if (texto == null) return "";
         return Normalizer.normalize(texto, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")

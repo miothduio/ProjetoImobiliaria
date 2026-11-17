@@ -35,6 +35,12 @@ import jakarta.servlet.http.HttpServletResponse;
  * | Cadastrar, alterar e remover imóveis  | ADMIN                       | Sim    |
  * | Cadastrar e gerenciar usuários        | ADMIN                       | Sim    |
  * | Alterar status de imóvel              | Qualquer usuário autenticado| Sim    |
+ * | Fazer/cancelar oferta, favoritos,     | USER (cliente)              | Sim    |
+ * |   assinar contrato                    |                             |        |
+ * | Listar/aceitar/recusar ofertas,       | ADMIN e CORRETOR            | Sim    |
+ * |   preparar contrato, painel           |                             |        |
+ * | Aprovar/recusar/cancelar contrato     | ADMIN                       | Sim    |
+ * | Baixar PDF do contrato                | dono do contrato ou equipe  | Sim    |
  *
  * 401 -> rota protegida sem token, ou token inválido/expirado
  * 403 -> token válido, mas o perfil não tem permissão (ex.: USER cadastrando imóvel)
@@ -92,6 +98,25 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/bairros/**", "/tipos-imoveis/**", "/fotos/**").permitAll()
                 .requestMatchers("/bairros/**", "/tipos-imoveis/**", "/fotos/**").hasRole("ADMIN")
 
+                // ---------- Ofertas, contratos, favoritos e painel (Aula 3) ----------
+                // Cliente
+                .requestMatchers(HttpMethod.POST, "/ofertas").hasRole("USER")
+                .requestMatchers(HttpMethod.GET, "/ofertas/minhas").hasRole("USER")
+                .requestMatchers(HttpMethod.PATCH, "/ofertas/*/cancelar").hasRole("USER")
+                .requestMatchers("/favoritos", "/favoritos/**").hasRole("USER")
+                .requestMatchers(HttpMethod.GET, "/contratos/meus").hasRole("USER")
+                .requestMatchers(HttpMethod.PATCH, "/contratos/*/assinar").hasRole("USER")
+                // Corretor e admin
+                .requestMatchers(HttpMethod.GET, "/ofertas").hasAnyRole("ADMIN", "CORRETOR")
+                .requestMatchers(HttpMethod.PATCH, "/ofertas/*/aceitar", "/ofertas/*/recusar").hasAnyRole("ADMIN", "CORRETOR")
+                .requestMatchers(HttpMethod.GET, "/contratos").hasAnyRole("ADMIN", "CORRETOR")
+                .requestMatchers(HttpMethod.POST, "/contratos").hasAnyRole("ADMIN", "CORRETOR")
+                .requestMatchers(HttpMethod.GET, "/painel").hasAnyRole("ADMIN", "CORRETOR")
+                // Só admin
+                .requestMatchers(HttpMethod.PATCH, "/contratos/*/aprovar", "/contratos/*/recusar", "/contratos/*/cancelar").hasRole("ADMIN")
+                // PDF: qualquer logado; o service confere se é o dono do contrato ou da equipe
+                .requestMatchers(HttpMethod.GET, "/contratos/*/pdf").authenticated()
+
                 // Rota de teste de e-mail -> ADMIN
                 .requestMatchers("/email/**").hasRole("ADMIN")
 
@@ -134,7 +159,7 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(origens));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        config.setExposedHeaders(List.of("Location"));
+        config.setExposedHeaders(List.of("Location", "Content-Disposition"));
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

@@ -35,3 +35,4 @@ build/
 ### Segredos e arquivos enviados ###
 .env
 uploads/
+contratos/

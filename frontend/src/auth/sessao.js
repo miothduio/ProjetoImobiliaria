@@ -7,14 +7,24 @@ export function avisarSessaoExpirada() {
   window.dispatchEvent(new CustomEvent(EVENTO_SESSAO_EXPIRADA))
 }
 
-/** Perfis do front. No backend: tipo ADMIN -> ADMIN; USER (ou vazio) -> CLIENTE. */
-export const PERFIS = { ADMIN: 'ADMIN', CLIENTE: 'CLIENTE' }
+/**
+ * Perfis do front. No backend: tipo ADMIN -> ADMIN; CORRETOR -> CORRETOR; USER (ou vazio) -> CLIENTE.
+ * O corretor usa a área /admin, mas só vê ofertas, contratos e o painel.
+ */
+export const PERFIS = { ADMIN: 'ADMIN', CORRETOR: 'CORRETOR', CLIENTE: 'CLIENTE' }
+
+/** ADMIN e CORRETOR: quem atende as ofertas. */
+export const EQUIPE = [PERFIS.ADMIN, PERFIS.CORRETOR]
 
 /** Página inicial de cada perfil depois do login. */
 export const ROTA_INICIAL = {
   [PERFIS.ADMIN]: '/admin',
+  [PERFIS.CORRETOR]: '/admin/ofertas',
   [PERFIS.CLIENTE]: '/cliente',
 }
+
+const NOMES = { ADMIN: 'admin', CORRETOR: 'corretor', CLIENTE: 'cliente' }
+export const nomeDoPerfil = (perfil) => NOMES[perfil] ?? ''
 
 /**
  * Transforma o token numa sessão { token, email, perfil, expiraEm }.
@@ -33,7 +43,7 @@ export function sessaoDoToken(token) {
   return {
     token,
     email: payload.sub,
-    perfil: tipo === 'ADMIN' ? PERFIS.ADMIN : PERFIS.CLIENTE,
+    perfil: PERFIS[tipo] && tipo !== 'CLIENTE' ? PERFIS[tipo] : PERFIS.CLIENTE,
     expiraEm,
   }
 }
@@ -50,9 +60,17 @@ export function destinoAposLogin(sessao, de) {
   const inicial = ROTA_INICIAL[sessao.perfil]
   if (!de || de === '/login') return inicial
 
-  const areaAdmin = de.startsWith('/admin')
-  const areaCliente = de.startsWith('/cliente')
-  if (areaAdmin && sessao.perfil !== PERFIS.ADMIN) return inicial
-  if (areaCliente && sessao.perfil !== PERFIS.CLIENTE) return inicial
+  if (de.startsWith('/admin') && !podeAbrirAdmin(sessao.perfil, de)) return inicial
+  if (de.startsWith('/cliente') && sessao.perfil !== PERFIS.CLIENTE) return inicial
   return de
+}
+
+/** Telas da área /admin que o corretor também abre. */
+const TELAS_DO_CORRETOR = ['/admin', '/admin/ofertas', '/admin/contratos']
+
+function podeAbrirAdmin(perfil, caminho) {
+  if (perfil === PERFIS.ADMIN) return true
+  if (perfil !== PERFIS.CORRETOR) return false
+  const semQuery = caminho.split(/[?#]/)[0].replace(/\/$/, '')
+  return TELAS_DO_CORRETOR.includes(semQuery)
 }

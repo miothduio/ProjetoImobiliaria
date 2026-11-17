@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
+import { useAuth } from '../auth/contexto.js'
+import { PERFIS } from '../auth/sessao.js'
+import BotaoFavorito from '../components/BotaoFavorito.jsx'
+import FormOferta from '../components/FormOferta.jsx'
+import Situacao from '../components/Situacao.jsx'
+import { minhasOfertas } from '../services/ofertasService.js'
+import { situacaoOferta } from '../utils/situacoes.js'
 import { Carregando, MensagemErro, SemResultados } from '../components/Feedback.jsx'
 import { foiCancelada, mensagemDeErro, urlDoBackend } from '../services/api.js'
 import { buscarImovel, listarFotosDoImovel } from '../services/imoveisService.js'
@@ -67,6 +74,63 @@ function Galeria({ fotos, titulo }) {
   )
 }
 
+const EM_ANDAMENTO = ['PENDENTE', 'EM_ESPERA', 'ACEITA']
+
+/**
+ * Oferta do cliente logado neste imóvel que ainda está em andamento (ou null).
+ * Serve para trocar o botão "Fazer oferta" pelo aviso "você já ofertou".
+ */
+function useMinhaOferta(imovelId, ativo, versao) {
+  const [resposta, setResposta] = useState({ chave: null, oferta: null })
+  const chave = `${imovelId}#${versao}`
+
+  useEffect(() => {
+    if (!ativo) return undefined
+    const controle = new AbortController()
+    minhasOfertas({ imovelId, tamanho: 20 }, { signal: controle.signal })
+      .then(({ conteudo }) =>
+        setResposta({ chave, oferta: conteudo.find((o) => EM_ANDAMENTO.includes(o.status)) ?? null }),
+      )
+      .catch(() => {
+        /* sem essa informação o botão aparece; o backend recusa a repetida com 409 */
+      })
+    return () => controle.abort()
+  }, [imovelId, ativo, chave])
+
+  return ativo && resposta.chave === chave ? resposta.oferta : null
+}
+
+function AcaoOferta({ imovel, disponivel, minhaOferta, onAbrir }) {
+  const { sessao } = useAuth()
+  const location = useLocation()
+
+  if (!disponivel) return null
+  if (sessao && sessao.perfil !== PERFIS.CLIENTE) {
+    return <p className="dica">Ofertas são feitas pelos clientes. Acompanhe em Painel › Ofertas.</p>
+  }
+  if (minhaOferta) {
+    const situacao = situacaoOferta(minhaOferta.status)
+    return (
+      <p className="dica">
+        Você já fez uma oferta neste imóvel: <Situacao situacao={situacao} />{' '}
+        <Link to="/cliente/ofertas">acompanhar</Link>
+      </p>
+    )
+  }
+  if (!sessao) {
+    return (
+      <Link to="/login" state={{ de: location.pathname }} className="botao">
+        Entrar para fazer oferta
+      </Link>
+    )
+  }
+  return (
+    <button type="button" className="botao" onClick={onAbrir} aria-label={`Fazer oferta no imóvel ${imovel.id}`}>
+      Fazer oferta
+    </button>
+  )
+}
+
 function Ficha({ imovel }) {
   const itens = [
     ['Código', imovel.id],
@@ -99,6 +163,10 @@ export default function ImovelDetalhe() {
 
   const [tentativa, setTentativa] = useState(0)
   const [contatoAberto, setContatoAberto] = useState(false)
+  const [ofertaAberta, setOfertaAberta] = useState(false)
+  const [ofertasEnviadas, setOfertasEnviadas] = useState(0)
+  const { sessao } = useAuth()
+  const minhaOferta = useMinhaOferta(id, sessao?.perfil === PERFIS.CLIENTE, ofertasEnviadas)
   const chaveAtual = `${id}#${tentativa}`
   const [resposta, setResposta] = useState({ chave: null, status: 'carregando', imovel: null, fotos: [], erro: null })
 
@@ -192,7 +260,9 @@ export default function ImovelDetalhe() {
           <button type="button" className="botao botao--destaque" onClick={() => setContatoAberto(true)}>
             Entrar em contato
           </button>
-          <p className="dica">A mensagem já vem com os dados deste imóvel e você pode editar tudo antes de enviar.</p>
+          <AcaoOferta imovel={imovel} disponivel={disponivel} minhaOferta={minhaOferta} onAbrir={() => setOfertaAberta(true)} />
+          <BotaoFavorito imovelId={imovel.id} />
+          <p className="dica">A mensagem de contato já vem com os dados deste imóvel e você pode editar tudo antes de enviar.</p>
         </div>
       </div>
 
@@ -230,6 +300,17 @@ export default function ImovelDetalhe() {
           Sobre: <strong>{titulo}</strong> (cód. {imovel.id})
         </p>
         <FormContato imovel={imovel} rascunho={rascunhoContatoImovel(imovel)} onFechar={() => setContatoAberto(false)} />
+      </Dialogo>
+
+      <Dialogo aberto={ofertaAberta} onFechar={() => setOfertaAberta(false)} titulo="Fazer oferta">
+        <p className="dialogo__sobre">
+          Imóvel: <strong>{titulo}</strong> (cód. {imovel.id})
+        </p>
+        <FormOferta
+          imovel={imovel}
+          onEnviada={() => setOfertasEnviadas((n) => n + 1)}
+          onFechar={() => setOfertaAberta(false)}
+        />
       </Dialogo>
     </article>
   )

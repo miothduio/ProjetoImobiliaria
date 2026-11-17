@@ -360,6 +360,122 @@ async function main() {
     temMensagem,
   )
 
+
+  // ---------------- 8. Fluxo oferta -> contrato (Aula 3) ----------------
+  const S8 = '8. Fluxo oferta → contrato e regras de negócio (Aula 3)'
+  const criarUsuario = async (nome, email, tipo) => {
+    const r = await chamar('POST', '/users', { token: tokenAdmin, body: { nome, email, senha: '123456', tipo } })
+    return r.status === 201 ? idDoLocation(r) : null
+  }
+  const entrar = async (email) => (await chamar('POST', '/public/login', { body: { email, password: '123456' } })).dados?.token
+  const emailCorretor = `corretor.${sufixo}@teste.com`
+  const emailCliente1 = `cliente1.${sufixo}@teste.com`
+  const emailCliente2 = `cliente2.${sufixo}@teste.com`
+  const idsFluxo = {
+    corretor: await criarUsuario('Corretor Teste', emailCorretor, 'CORRETOR'),
+    cliente1: await criarUsuario('Cliente Um Teste', emailCliente1, 'USER'),
+    cliente2: await criarUsuario('Cliente Dois Teste', emailCliente2, 'USER'),
+  }
+  await caso(S8, 'POST /users cria CORRETOR (novo perfil)', 200, async () => ({ status: idsFluxo.corretor ? 200 : 0 }))
+  const tokCorretor = await entrar(emailCorretor)
+  const tokC1 = await entrar(emailCliente1)
+  const tokC2 = await entrar(emailCliente2)
+
+  const novoImovel = async (dados) => {
+    const r = await chamar('POST', '/imoveis', { token: tokenAdmin, body: { status: 'DISPONIVEL', dormitorios: 2, ...dados } })
+    return r.status === 201 ? idDoLocation(r) : null
+  }
+  const imAluguel = await novoImovel({ titulo: `Apto aluguel ${sufixo}`, finalidade: 'ALUGUEL', precoAluguel: 1500 })
+  const imVenda = await novoImovel({ titulo: `Casa venda ${sufixo}`, finalidade: 'VENDA', precoVenda: 300000 })
+  const statusDoImovel = async (id) => (await chamar('GET', `/imoveis/${id}`)).dados?.status
+  const situacaoDa = async (token, imovelId) =>
+    (await chamar('GET', `/ofertas/minhas?imovelId=${imovelId}`, { token })).dados?.conteudo?.[0]?.status
+  const ofertaAluguel = (valor) => ({ imovelId: imAluguel, tipo: 'ALUGUEL', valor, mensagem: 'Teste automático' })
+  const esperaStatus = (s) => (r) => (r.dados?.status === s ? null : `status ${r.dados?.status}`)
+
+  await caso(S8, 'POST /ofertas sem token', 401, () => chamar('POST', '/ofertas', { body: ofertaAluguel(1400) }))
+  await caso(S8, 'POST /ofertas ADMIN (só cliente oferta)', 403, () => chamar('POST', '/ofertas', { token: tokenAdmin, body: ofertaAluguel(1400) }))
+  await caso(S8, 'POST /ofertas valor negativo', 400, () => chamar('POST', '/ofertas', { token: tokC1, body: ofertaAluguel(-5) }), temMensagem)
+  await caso(S8, 'POST /ofertas compra em imóvel só de aluguel', 409, () =>
+    chamar('POST', '/ofertas', { token: tokC1, body: { ...ofertaAluguel(1400), tipo: 'VENDA' } }), temMensagem)
+  const o1 = await caso(S8, 'POST /ofertas cliente 1', 201, () => chamar('POST', '/ofertas', { token: tokC1, body: ofertaAluguel(1400) }), esperaStatus('PENDENTE'))
+  await caso(S8, 'POST /ofertas repetida no mesmo imóvel', 409, () => chamar('POST', '/ofertas', { token: tokC1, body: ofertaAluguel(1450) }), temMensagem)
+  await caso(S8, 'POST /ofertas cliente 2 no mesmo imóvel', 201, () => chamar('POST', '/ofertas', { token: tokC2, body: ofertaAluguel(1500) }))
+  await caso(S8, 'GET /ofertas/minhas traz só as do cliente', 200, () => chamar('GET', '/ofertas/minhas', { token: tokC1 }), (r) =>
+    r.dados?.conteudo?.every((o) => o.cliente?.email === emailCliente1) && !JSON.stringify(r.dados).includes('senha') ? null : 'veio oferta de outro cliente ou senha')
+  await caso(S8, 'GET /ofertas USER', 403, () => chamar('GET', '/ofertas', { token: tokC1 }))
+  await caso(S8, 'GET /ofertas?status=pendente CORRETOR', 200, () => chamar('GET', '/ofertas?status=pendente', { token: tokCorretor }), (r) =>
+    r.dados?.conteudo?.every((o) => o.status === 'PENDENTE') ? null : 'filtro não aplicado')
+
+  const idO1 = o1?.dados?.id
+  await caso(S8, 'PATCH /ofertas/{id}/aceitar USER', 403, () => chamar('PATCH', `/ofertas/${idO1}/aceitar`, { token: tokC1 }))
+  await caso(S8, 'PATCH /ofertas/{id}/aceitar CORRETOR', 200, () => chamar('PATCH', `/ofertas/${idO1}/aceitar`, { token: tokCorretor }), esperaStatus('ACEITA'))
+  await caso(S8, 'aceitar: imóvel fica RESERVADO', 200, async () => ({ status: 200, dados: { status: await statusDoImovel(imAluguel) } }), esperaStatus('RESERVADO'))
+  await caso(S8, 'aceitar: a outra oferta fica EM_ESPERA', 200, async () => ({ status: 200, dados: { status: await situacaoDa(tokC2, imAluguel) } }), esperaStatus('EM_ESPERA'))
+  await caso(S8, 'POST /ofertas em imóvel reservado', 409, () => chamar('POST', '/ofertas', { token: tokC2, body: ofertaAluguel(1600) }), temMensagem)
+
+  const preparar = (token, ofertaId) => {
+    const corpo = new FormData()
+    corpo.append('ofertaId', String(ofertaId))
+    return fetch(`${API_URL}/contratos`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: corpo }).then(async (r) => ({
+      status: r.status,
+      dados: await r.json().catch(() => null),
+    }))
+  }
+  await caso(S8, 'POST /contratos USER', 403, () => preparar(tokC1, idO1))
+  const c1 = await caso(S8, 'POST /contratos CORRETOR (PDF gerado)', 201, () => preparar(tokCorretor, idO1), esperaStatus('AGUARDANDO_APROVACAO'))
+  const idC1 = c1?.dados?.id
+  await caso(S8, 'POST /contratos de novo na mesma oferta', 409, () => preparar(tokCorretor, idO1), temMensagem)
+  await caso(S8, 'PATCH assinar antes da aprovação', 409, () =>
+    chamar('PATCH', `/contratos/${idC1}/assinar`, { token: tokC1, body: { nome: 'Cliente Um Teste', aceite: true } }), temMensagem)
+  await caso(S8, 'PATCH /contratos/{id}/aprovar CORRETOR', 403, () => chamar('PATCH', `/contratos/${idC1}/aprovar`, { token: tokCorretor }))
+  await caso(S8, 'PATCH /contratos/{id}/aprovar ADMIN', 200, () => chamar('PATCH', `/contratos/${idC1}/aprovar`, { token: tokenAdmin }), esperaStatus('AGUARDANDO_ASSINATURA'))
+  await caso(S8, 'GET /contratos/{id}/pdf de outro cliente', 404, () => chamar('GET', `/contratos/${idC1}/pdf`, { token: tokC2 }))
+  await caso(S8, 'GET /contratos/{id}/pdf dono', 200, async () => {
+    const r = await fetch(`${API_URL}/contratos/${idC1}/pdf`, { headers: { Authorization: `Bearer ${tokC1}` } })
+    const inicio = Buffer.from(await r.arrayBuffer()).subarray(0, 4).toString()
+    return { status: r.status, dados: { inicio, tipo: r.headers.get('content-type') } }
+  }, (r) => (r.dados.inicio === '%PDF' && r.dados.tipo?.includes('pdf') ? null : `não é PDF (${r.dados.tipo})`))
+  await caso(S8, 'PATCH assinar com nome diferente do cadastro', 400, () =>
+    chamar('PATCH', `/contratos/${idC1}/assinar`, { token: tokC1, body: { nome: 'Outra Pessoa', aceite: true } }), temMensagem)
+  await caso(S8, 'PATCH /contratos/{id}/assinar cliente', 200, () =>
+    chamar('PATCH', `/contratos/${idC1}/assinar`, { token: tokC1, body: { nome: 'cliente um teste', aceite: true } }), esperaStatus('ASSINADO'))
+  await caso(S8, 'assinar: imóvel fica ALUGADO', 200, async () => ({ status: 200, dados: { status: await statusDoImovel(imAluguel) } }), esperaStatus('ALUGADO'))
+  await caso(S8, 'assinar: a oferta em espera é RECUSADA', 200, async () => ({ status: 200, dados: { status: await situacaoDa(tokC2, imAluguel) } }), esperaStatus('RECUSADA'))
+  await caso(S8, 'PATCH cancelar contrato assinado', 409, () => chamar('PATCH', `/contratos/${idC1}/cancelar`, { token: tokenAdmin, body: {} }), temMensagem)
+
+  // cliente desistiu: admin cancela e o imóvel volta
+  const v2 = await chamar('POST', '/ofertas', { token: tokC2, body: { imovelId: imVenda, tipo: 'VENDA', valor: 290000 } })
+  await chamar('POST', '/ofertas', { token: tokC1, body: { imovelId: imVenda, tipo: 'VENDA', valor: 280000 } })
+  await chamar('PATCH', `/ofertas/${v2.dados?.id}/aceitar`, { token: tokenAdmin })
+  const c2 = await preparar(tokenAdmin, v2.dados?.id)
+  await chamar('PATCH', `/contratos/${c2.dados?.id}/aprovar`, { token: tokenAdmin })
+  await caso(S8, 'PATCH /contratos/{id}/cancelar ADMIN (cliente desistiu)', 200, () =>
+    chamar('PATCH', `/contratos/${c2.dados?.id}/cancelar`, { token: tokenAdmin, body: { motivo: 'Cliente desistiu' } }), esperaStatus('CANCELADO'))
+  await caso(S8, 'cancelar: imóvel volta a DISPONIVEL', 200, async () => ({ status: 200, dados: { status: await statusDoImovel(imVenda) } }), esperaStatus('DISPONIVEL'))
+  await caso(S8, 'cancelar: quem estava em espera volta a PENDENTE', 200, async () => ({ status: 200, dados: { status: await situacaoDa(tokC1, imVenda) } }), esperaStatus('PENDENTE'))
+
+  // favoritos
+  await caso(S8, 'POST /favoritos/{id}', 201, () => chamar('POST', `/favoritos/${imVenda}`, { token: tokC1 }))
+  await caso(S8, 'POST /favoritos/{id} de novo (idempotente)', 200, () => chamar('POST', `/favoritos/${imVenda}`, { token: tokC1 }))
+  await caso(S8, 'GET /favoritos/ids', 200, () => chamar('GET', '/favoritos/ids', { token: tokC1 }), (r) => (r.dados?.includes(imVenda) ? null : 'imóvel não está na lista'))
+  await caso(S8, 'DELETE /favoritos/{id}', 204, () => chamar('DELETE', `/favoritos/${imVenda}`, { token: tokC1 }))
+  await caso(S8, 'GET /favoritos ADMIN', 403, () => chamar('GET', '/favoritos', { token: tokenAdmin }))
+
+  // painel e usuários
+  await caso(S8, 'GET /painel CORRETOR', 200, () => chamar('GET', '/painel', { token: tokCorretor }), (r) =>
+    typeof r.dados?.totais?.ofertasPendentes === 'number' && Array.isArray(r.dados?.imoveisPorBairro) ? null : 'painel sem totais/séries')
+  await caso(S8, 'GET /painel USER', 403, () => chamar('GET', '/painel', { token: tokC1 }))
+  const eu = (await chamar('GET', '/me', { token: tokenAdmin })).dados
+  await caso(S8, 'DELETE /users/{id} o próprio admin', 409, () => chamar('DELETE', `/users/${eu?.id}`, { token: tokenAdmin }), temMensagem)
+
+  // limpeza do fluxo: excluir imóvel e usuários leva junto ofertas, contratos e favoritos
+  await caso(S8, 'DELETE /imoveis/{id} com ofertas e contrato', 204, () => chamar('DELETE', `/imoveis/${imAluguel}`, { token: tokenAdmin }))
+  await chamar('DELETE', `/imoveis/${imVenda}`, { token: tokenAdmin })
+  for (const id of Object.values(idsFluxo)) {
+    if (id) await chamar('DELETE', `/users/${id}`, { token: tokenAdmin })
+  }
+
   // ---------------- 6. CORS ----------------
   const S6 = `6. CORS para o front (${ORIGEM_FRONT})`
   const conferirOrigem = (r) =>

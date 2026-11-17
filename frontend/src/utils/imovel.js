@@ -99,3 +99,24 @@ export function listaCaracteristicas(texto) {
     .map((item) => item.trim())
     .filter(Boolean)
 }
+
+/**
+ * Tipos de oferta que o imóvel aceita (mesma regra do backend):
+ * finalidade VENDA ou ALUGUEL vale como está; nos cadastros antigos ("Residencial"),
+ * vale o preço que estiver preenchido.
+ */
+export function tiposDeOferta(imovel) {
+  const fin = normalizar(imovel?.finalidade)
+  if (fin === 'VENDA' || fin === 'ALUGUEL') return [fin]
+  const tipos = []
+  if (imovel?.precoAluguel != null) tipos.push('ALUGUEL')
+  if (imovel?.precoVenda != null) tipos.push('VENDA')
+  return tipos
+}
+
+/** 350000 -> "350.000,00" (para pré-preencher campos de valor) */
+export function valorParaCampo(valor) {
+  const numero = Number(valor)
+  if (valor == null || !Number.isFinite(numero)) return ''
+  return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}

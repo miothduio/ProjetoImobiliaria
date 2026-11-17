@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.dtos.UserDTO;
 import com.example.demo.models.UserModel;
@@ -19,6 +20,9 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private RemocaoService remocao;
 
     public List<UserModel> getAllUsers() {
         return repository.findAll();
@@ -74,18 +78,21 @@ public class UserService {
         return repository.save(user);
     }
 
+    /** Apaga também favoritos, ofertas e contratos do usuário (e libera imóvel reservado para ele). */
+    @Transactional
     public void delete(Integer id) {
+        remocao.dependenciasDoUsuario(id);
         repository.deleteById(id);
     }
 
-    /** Aceita "admin", "ADMIN", "user"... Se não vier nada, o usuário é USER. */
+    /** Aceita "admin", "ADMIN", "corretor", "user"... Se não vier nada, o usuário é USER. */
     private String normalizarTipo(String tipo) {
         if (tipo == null || tipo.isBlank()) {
-            return "USER";
+            return Perfis.CLIENTE;
         }
         String t = tipo.trim().toUpperCase();
-        if (!t.equals("ADMIN") && !t.equals("USER")) {
-            throw new IllegalArgumentException("Tipo inválido: use ADMIN ou USER");
+        if (!t.equals(Perfis.ADMIN) && !t.equals(Perfis.CORRETOR) && !t.equals(Perfis.CLIENTE)) {
+            throw new IllegalArgumentException("Tipo inválido: use ADMIN, CORRETOR ou USER");
         }
         return t;
     }

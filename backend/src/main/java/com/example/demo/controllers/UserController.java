@@ -7,10 +7,13 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.example.demo.dtos.UserDTO;
+import com.example.demo.excecoes.RegraNegocioException;
 import com.example.demo.models.UserModel;
 import com.example.demo.services.UserService;
 
@@ -67,10 +70,18 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<?> update(
             @RequestBody UserDTO dto,
-            @PathVariable Integer id) {
+            @PathVariable Integer id,
+            @AuthenticationPrincipal UserDetails principal) {
 
         if (service.find(id) == null) {
             return ResponseEntity.notFound().build();
+        }
+
+        // o admin não tira o próprio acesso de administrador (ficaria trancado fora do painel)
+        UserModel atual = service.find(id);
+        if (principal != null && atual.getEmail().equalsIgnoreCase(principal.getUsername())
+                && dto.getTipo() != null && !"ADMIN".equalsIgnoreCase(dto.getTipo().trim())) {
+            throw new RegraNegocioException("Você não pode tirar o seu próprio perfil de administrador.");
         }
 
         try {
@@ -82,10 +93,15 @@ public class UserController {
         }
     }
 
+    /** O admin não pode excluir a si mesmo (409). Ofertas, contratos e favoritos do usuário vão junto. */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        if (service.find(id) == null) {
+    public ResponseEntity<?> delete(@PathVariable Integer id, @AuthenticationPrincipal UserDetails principal) {
+        UserModel model = service.find(id);
+        if (model == null) {
             return ResponseEntity.notFound().build();
+        }
+        if (principal != null && model.getEmail().equalsIgnoreCase(principal.getUsername())) {
+            throw new RegraNegocioException("Você não pode excluir a sua própria conta.");
         }
         service.delete(id);
         return ResponseEntity.noContent().build();

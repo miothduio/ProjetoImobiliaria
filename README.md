@@ -31,7 +31,16 @@ cp .env.example .env      # preencha a senha SMTP do Mailgun (usada no "saber ma
 ```
 
 - Rode **a partir da pasta `backend/`**: o `.env` e a pasta `uploads/` são lidos dali. No VS Code, o `.vscode/launch.json` da raiz já aponta para `backend/`.
-- Usuário ADMIN inicial: `admin@admin.com` / `admin123`.
+- Usuários criados ao subir (se ainda não existirem):
+
+  | Perfil | E-mail | Senha |
+  |---|---|---|
+  | Administrador | `admin@admin.com` | `admin123` |
+  | Corretor | `corretor@imobiliaria.com` | `corretor123` |
+  | Cliente | `cliente@imobiliaria.com` | `cliente123` (nome para assinar: **Cliente Demonstração**) |
+
+  Para não criar o corretor e o cliente de demonstração: `app.demo.criar-usuarios=false`.
+- Os PDFs dos contratos ficam em `backend/contratos/` (pasta privada, fora do Git; só saem pela API com token).
 - Sem o `.env` a API sobe normalmente, só o envio de e-mail não funciona.
 
 ### E-mail (Mailgun)
@@ -60,11 +69,21 @@ Acesse **http://localhost:5173**. Para mudar o endereço do backend (`VITE_API_U
 
 | Rota | Quem acessa |
 |---|---|
-| `/` vitrine (filtros, ordenação, paginação), `/imoveis/:id` detalhe, `/contato`, `/login` | todos |
-| `/cliente` área do cliente | perfil `USER` |
-| `/admin` painel | perfil `ADMIN` |
+| `/` vitrine (filtros, ordenação, paginação, ☆ favoritar), `/imoveis/:id` detalhe (fazer oferta), `/contato`, `/login` | todos |
+| `/cliente` resumo, `/cliente/ofertas`, `/cliente/favoritos`, `/cliente/contratos` (assinar) | cliente (`USER`) |
+| `/admin` painel com gráficos, `/admin/ofertas`, `/admin/contratos` | admin e corretor |
+| `/admin/usuarios` | só admin |
 
 Sem login, as rotas protegidas mandam para `/login` e, depois de entrar, voltam para onde a pessoa estava. Com o perfil errado aparece "Acesso negado". Quando o token expira (2 h) ou o backend responde 401, a sessão é encerrada.
+
+### Demonstração do checkpoint da Aula 3
+
+1. **Cliente** (`cliente@imobiliaria.com`): abre um imóvel disponível › **Fazer oferta**.
+2. **Corretor** (`corretor@imobiliaria.com`): Painel › Ofertas › **Aceitar** (o imóvel fica reservado e as outras ofertas dele ficam em espera) › **Preparar contrato** (gera o PDF ou envia um pronto).
+3. **Admin** (`admin@admin.com`): Painel › Contratos › **Aprovar** (o cliente recebe e-mail).
+4. **Cliente**: Minha área › Contratos › **Assinar** (marca "li e concordo" e digita o nome do cadastro). O imóvel passa a alugado/vendido e as outras ofertas são recusadas.
+
+As regras e respostas da API estão em [`docs/comportamento-da-api.md`](docs/comportamento-da-api.md#aula-3-ofertas-contratos-favoritos-e-painel).
 
 ## Testes de segurança da API
 
@@ -75,7 +94,7 @@ cd frontend
 npm run testar:api
 ```
 
-O script roda o roteiro `backend/TESTES-JWT.md` inteiro e mostra ✓/✗ em cada linha. A seção 7 confere os comportamentos que o front-end trata (login vazio, token expirado em rota pública, `/me`, `/imoveis/busca`), descritos em [`docs/comportamento-da-api.md`](docs/comportamento-da-api.md). Se o backend usa um `JWT_SECRET` próprio, rode com a mesma variável: `JWT_SECRET=... npm run testar:api`. Ele cobre login, rotas públicas, 401 sem token ou com token inválido, 403 para perfil sem permissão, CRUD de imóveis e usuários, alteração de status e CORS. Os dados de teste são criados e apagados pelo próprio script. Há também a coleção do Insomnia em `backend/insomnia-testes-jwt.json`.
+O script roda o roteiro `backend/TESTES-JWT.md` inteiro e mostra ✓/✗ em cada linha. A seção 8 percorre o fluxo da Aula 3 (oferta → aceite → contrato → aprovação → assinatura, cancelamento, favoritos, painel) e as regras de negócio. A seção 7 confere os comportamentos que o front-end trata (login vazio, token expirado em rota pública, `/me`, `/imoveis/busca`), descritos em [`docs/comportamento-da-api.md`](docs/comportamento-da-api.md). Se o backend usa um `JWT_SECRET` próprio, rode com a mesma variável: `JWT_SECRET=... npm run testar:api`. Ele cobre login, rotas públicas, 401 sem token ou com token inválido, 403 para perfil sem permissão, CRUD de imóveis e usuários, alteração de status e CORS. Os dados de teste são criados e apagados pelo próprio script. Há também a coleção do Insomnia em `backend/insomnia-testes-jwt.json`.
 
 ## Progresso
 
@@ -95,3 +114,23 @@ O script roda o roteiro `backend/TESTES-JWT.md` inteiro e mostra ✓/✗ em cada
 - [x] Token expirado ou 401 desloga; logout apaga o token e redireciona
 - [x] Menu que muda conforme o login e o perfil, responsivo no celular
 - [x] Visual de blog dos anos 2000 (estilo Blogspot): imóveis como posts com data, barra lateral com bairros e contador de visitas, janela de contato estilo Windows XP
+
+### Aula 3: Desenvolvimento e integração
+- [x] Perfis: cliente, **corretor** (novo) e administrador, cada um com o seu menu e área inicial
+- [x] Backend: tabelas `ofertas`, `contratos` e `favoritos`; regras de negócio com respostas 409 e mensagem
+- [x] Ofertas: o cliente oferta no detalhe (só em imóvel disponível), acompanha e desiste; corretor/admin filtram por situação, aceitam e recusam, com paginação
+- [x] Favoritos: estrela na vitrine e no detalhe, lista na área do cliente
+- [x] Contratos: o corretor prepara (PDF gerado pelo sistema ou enviado), o admin aprova/recusa/cancela e o cliente recebe e-mail; o cliente lê o PDF e assina
+- [x] Painel com totais e gráficos (imóveis por bairro, ofertas por situação, imóveis por finalidade e por situação), com dica ao passar o mouse e tabela
+- [x] Vitrine mostra a situação em cada card ("Disponível" ou "Indisponível no momento"); os disponíveis vêm primeiro e o filtro "Situação › Só disponíveis" esconde os outros
+- [x] Usuários: cadastrar, buscar, editar, trocar perfil e excluir com confirmação (o admin não exclui a si mesmo)
+- [x] Carregando, sem resultados e erro amigável em todas as telas novas; regras testadas na seção 8 do `npm run testar:api`
+
+
+//users exemplo
+- ana.souza@exemplo.com
+- bruno.lima@exemplo.com
+- carla.mendes@exemplo.com
+- diego.rocha@exemplo.com
+
+(senha:cliente123)

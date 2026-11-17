@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/contexto.js'
-import { PERFIS } from '../auth/sessao.js'
+import { PERFIS, nomeDoPerfil } from '../auth/sessao.js'
 import BarraLateral from './BarraLateral.jsx'
 
 /**
@@ -16,7 +16,9 @@ function abasDoMenu(perfil) {
     { para: '/?finalidade=ALUGUEL', rotulo: 'Alugar', ativa: (p, b) => p === '/' && finalidade(b) === 'ALUGUEL' },
     { para: '/contato', rotulo: 'Contato', ativa: (p) => p === '/contato' },
   ]
-  if (perfil === PERFIS.ADMIN) abas.push({ para: '/admin', rotulo: 'Painel', ativa: (p) => p.startsWith('/admin') })
+  if (perfil === PERFIS.ADMIN || perfil === PERFIS.CORRETOR) {
+    abas.push({ para: '/admin', rotulo: 'Painel', ativa: (p) => p.startsWith('/admin') })
+  }
   if (perfil === PERFIS.CLIENTE) abas.push({ para: '/cliente', rotulo: 'Minha área', ativa: (p) => p.startsWith('/cliente') })
   if (!perfil) abas.push({ para: '/login', rotulo: 'Entrar', ativa: (p) => p === '/login' })
   return abas
@@ -45,6 +47,7 @@ export default function Layout() {
   const { sessao, usuario, sair } = useAuth()
   const { pathname, search } = useLocation()
   const nomeCurto = usuario?.nome?.split(' ')[0] || sessao?.email
+  const areaEquipe = pathname.startsWith('/admin')
 
   return (
     <div className="moldura">
@@ -72,7 +75,7 @@ export default function Layout() {
         {sessao && (
           <p className="conta">
             Olá, <strong title={sessao.email}>{nomeCurto}</strong>
-            {sessao.perfil === PERFIS.ADMIN && <span className="conta__perfil">admin</span>}
+            {sessao.perfil !== PERFIS.CLIENTE && <span className="conta__perfil">{nomeDoPerfil(sessao.perfil)}</span>}
             <span aria-hidden="true"> | </span>
             <button type="button" className="link" onClick={sair}>
               Sair
@@ -83,11 +86,12 @@ export default function Layout() {
 
       <AvisoSessao />
 
-      <div className="colunas">
+      {/* na área da equipe as tabelas precisam da largura toda: sem a barra lateral */}
+      <div className={`colunas ${areaEquipe ? 'colunas--larga' : ''}`}>
         <main className="conteudo">
           <Outlet />
         </main>
-        <BarraLateral />
+        {!areaEquipe && <BarraLateral />}
       </div>
 
       <footer className="rodape">

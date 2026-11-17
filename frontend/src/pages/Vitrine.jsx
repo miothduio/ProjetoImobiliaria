@@ -14,7 +14,7 @@ const ORDENS = [
   { valor: 'preco_asc', rotulo: 'Menor preço' },
   { valor: 'preco_desc', rotulo: 'Maior preço' },
 ]
-const CHAVES_FILTRO = ['bairro', 'finalidade', 'min', 'max']
+const CHAVES_FILTRO = ['bairro', 'finalidade', 'min', 'max', 'situacao']
 
 /** Como no Blogger: um cabeçalho de data e, embaixo, os posts daquele dia. */
 function agruparPorDia(imoveis) {
@@ -40,6 +40,7 @@ function lerUrl(params) {
     finalidade: params.get('finalidade') ?? '',
     min: params.get('min') ?? '',
     max: params.get('max') ?? '',
+    situacao: params.get('situacao') === 'disponiveis' ? 'disponiveis' : '',
     ordem: ORDENS.some((o) => o.valor === ordem) ? ordem : 'recentes',
     pagina: Number.isFinite(pagina) && pagina > 0 ? pagina : 1,
   }
@@ -95,6 +96,8 @@ export default function Vitrine() {
         precoMin: atuais.min,
         precoMax: atuais.max,
         ordem: atuais.ordem,
+        // por padrão mostra todos (o card diz se está disponível); o filtro "Só disponíveis" esconde os outros
+        apenasDisponiveis: atuais.situacao === 'disponiveis',
         pagina: atuais.pagina - 1, // a API começa em 0
         tamanho: POR_PAGINA,
       },
@@ -115,7 +118,7 @@ export default function Vitrine() {
   }
 
   const aplicarFiltros = (filtros) => navegar({ ...filtros, pagina: 1 })
-  const limparFiltros = () => navegar({ bairro: '', finalidade: '', min: '', max: '', pagina: 1 })
+  const limparFiltros = () => navegar({ bairro: '', finalidade: '', min: '', max: '', situacao: '', pagina: 1 })
   const irParaPagina = (pagina) => navegar({ pagina }, { rolar: true })
 
   const emDia = resposta.chave === chaveAtual
@@ -137,7 +140,9 @@ export default function Vitrine() {
             ? 'Imóveis à venda'
             : valores.finalidade === 'ALUGUEL'
               ? 'Imóveis para alugar'
-              : 'Imóveis disponíveis'}
+              : valores.situacao === 'disponiveis'
+                ? 'Imóveis disponíveis'
+                : 'Nossos imóveis'}
         </h1>
       </header>
 
@@ -173,7 +178,7 @@ export default function Vitrine() {
       {status === 'erro' && <MensagemErro mensagem={erro} onTentarNovamente={() => setTentativa((n) => n + 1)} />}
 
       {status === 'ok' && total === 0 && (
-        <SemResultados titulo={temFiltro ? 'Nenhum imóvel com esses filtros' : 'Nenhum imóvel disponível no momento'}>
+        <SemResultados titulo={temFiltro ? 'Nenhum imóvel com esses filtros' : 'Nenhum imóvel cadastrado no momento'}>
           {temFiltro ? (
             <>
               Tente ampliar a faixa de preço ou escolher outro bairro.{' '}

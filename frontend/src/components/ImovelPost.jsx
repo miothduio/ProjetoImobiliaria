@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { listarFotosDoImovel } from '../services/imoveisService.js'
+import BotaoFavorito from './BotaoFavorito.jsx'
 import { urlDoBackend } from '../services/api.js'
 import { horaCurta, resumo } from '../utils/data.js'
-import { formatarArea, localizacao, normalizar, rotuloFinalidade, valorPrincipal } from '../utils/imovel.js'
+import { estaDisponivel, formatarArea, localizacao, normalizar, rotuloFinalidade, rotuloStatus, valorPrincipal } from '../utils/imovel.js'
 
 /**
  * Capa do post. A busca da vitrine já traz "capaUrl"; só quando o imóvel veio de outro
@@ -84,6 +85,15 @@ export default function ImovelPost({ imovel, finalidadeFiltro }) {
               <span className="post__consulte">Valor sob consulta</span>
             )}
           </p>
+          <p className="post__situacao">
+            {estaDisponivel(imovel) ? (
+              <span className="status status--ok">Disponível</span>
+            ) : (
+              <span className="status status--indisponivel" title={rotuloStatus(imovel.status) ?? undefined}>
+                Indisponível no momento
+              </span>
+            )}
+          </p>
           <p className="post__local">
             {[imovel.tipoImovel?.nome, localizacao(imovel)].filter(Boolean).join(' em ')}
           </p>
@@ -114,6 +124,7 @@ export default function ImovelPost({ imovel, finalidadeFiltro }) {
             , <Link to={`/?bairro=${imovel.bairro.id}`}>{imovel.bairro.nome}</Link>
           </>
         )}
+        <BotaoFavorito imovelId={imovel.id} />
       </p>
     </article>
   )

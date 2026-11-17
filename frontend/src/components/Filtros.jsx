@@ -11,6 +11,7 @@ export default function Filtros({ valores, bairros, onAplicar, onLimpar }) {
     finalidade: valores.finalidade,
     min: valores.min,
     max: valores.max,
+    situacao: valores.situacao,
   })
   const [erros, setErros] = useState({})
 
@@ -38,10 +39,11 @@ export default function Filtros({ valores, bairros, onAplicar, onLimpar }) {
       finalidade: campos.finalidade,
       min: min.valor != null ? String(min.valor) : '',
       max: max.valor != null ? String(max.valor) : '',
+      situacao: campos.situacao,
     })
   }
 
-  const temFiltro = Boolean(valores.bairro || valores.finalidade || valores.min || valores.max)
+  const temFiltro = Boolean(valores.bairro || valores.finalidade || valores.min || valores.max || valores.situacao)
   const erroFaixa = erros.min || erros.max || erros.faixa
 
   return (
@@ -73,6 +75,14 @@ export default function Filtros({ valores, bairros, onAplicar, onLimpar }) {
           <option value="">Venda e aluguel</option>
           <option value="VENDA">Venda</option>
           <option value="ALUGUEL">Aluguel</option>
+        </select>
+      </div>
+
+      <div className="campo">
+        <label htmlFor="filtro-situacao">Situação</label>
+        <select id="filtro-situacao" name="situacao" value={campos.situacao} onChange={alterar}>
+          <option value="">Todos</option>
+          <option value="disponiveis">Só disponíveis</option>
         </select>
       </div>
 
